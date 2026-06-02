@@ -1,0 +1,11 @@
+@"
+__pycache__/
+*.pyc
+*.pt
+*.db
+clips/
+.coverage
+.pytest_cache/
+setup_files.py
+venv/
+"@ | Out-File -FilePath .gitignore -Encoding utf8

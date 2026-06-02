@@ -1,0 +1,77 @@
+{
+  "store_id": "ST1008",
+  "store_name": "Brigade_Bangalore",
+  "city": "Bangalore",
+  "timezone": "Asia/Kolkata",
+  "open_hours": { "start": "10:00", "end": "22:00" },
+  "cameras": [
+    {
+      "camera_id": "CAM_ENTRY_01",
+      "file": "CAM_1.mp4",
+      "role": "entry",
+      "clip_start_utc": "2026-04-10T07:30:00Z",
+      "entry_line_y_ratio": 0.5,
+      "zones_by_region": {
+        "top": "ENTRY_EXIT",
+        "bottom": "ENTRY_EXIT"
+      }
+    },
+    {
+      "camera_id": "CAM_FLOOR_01",
+      "file": "CAM_2.mp4",
+      "role": "floor",
+      "clip_start_utc": "2026-04-10T07:30:00Z",
+      "zones_by_region": {
+        "top_left":     "SKINCARE",
+        "top_right":    "MAKEUP",
+        "bottom_left":  "HAIRCARE",
+        "bottom_right": "FRAGRANCE"
+      }
+    },
+    {
+      "camera_id": "CAM_BILLING_01",
+      "file": "CAM_3.mp4",
+      "role": "billing",
+      "clip_start_utc": "2026-04-10T11:10:00Z",
+      "zones_by_region": {
+        "all": "BILLING"
+      }
+    },
+    {
+      "camera_id": "CAM_ENTRY_02",
+      "file": "CAM_4.mp4",
+      "role": "entry",
+      "clip_start_utc": "2026-04-10T13:40:00Z",
+      "entry_line_y_ratio": 0.5,
+      "zones_by_region": {
+        "top": "ENTRY_EXIT",
+        "bottom": "ENTRY_EXIT"
+      }
+    },
+    {
+      "camera_id": "CAM_FLOOR_02",
+      "file": "CAM_5.mp4",
+      "role": "floor",
+      "clip_start_utc": "2026-04-10T13:40:00Z",
+      "zones_by_region": {
+        "top_left":     "LIPCARE",
+        "top_right":    "NAILCARE",
+        "bottom_left":  "ACCESSORIES",
+        "bottom_right": "FRAGRANCE"
+      }
+    }
+  ],
+  "zones": [
+    { "zone_id": "ENTRY_EXIT",   "sku_zone": null },
+    { "zone_id": "SKINCARE",     "sku_zone": "MOISTURISER" },
+    { "zone_id": "MAKEUP",       "sku_zone": "FOUNDATION" },
+    { "zone_id": "HAIRCARE",     "sku_zone": "SHAMPOO" },
+    { "zone_id": "FRAGRANCE",    "sku_zone": "PERFUME" },
+    { "zone_id": "BILLING",      "sku_zone": null },
+    { "zone_id": "LIPCARE",      "sku_zone": "LIP_BALM" },
+    { "zone_id": "NAILCARE",     "sku_zone": "NAIL_POLISH" },
+    { "zone_id": "ACCESSORIES",  "sku_zone": "BRUSH" }
+  ],
+  "pos_file": "data/pos_transactions.csv",
+  "conversion_window_seconds": 300
+}
