@@ -10,7 +10,7 @@ Real-time retail analytics from CCTV footage — Purplle Tech Challenge 2026, Ro
 
 ```bash
 # 1. Clone and enter the project
-git clone <repo-url> store-intelligence && cd store-intelligence
+git clone https://github.com/MANJULA690/store-intelligence && cd store-intelligence
 
 # 2. Start the API
 docker compose up --build -d
@@ -27,12 +27,13 @@ curl http://localhost:8000/stores/ST1008/metrics | python3 -m json.tool
 ```
 
 The API is now running. Check it:
-- Metrics:   http://localhost:8000/stores/ST1008/metrics
-- Funnel:    http://localhost:8000/stores/ST1008/funnel
-- Heatmap:   http://localhost:8000/stores/ST1008/heatmap
+
+- Metrics: http://localhost:8000/stores/ST1008/metrics
+- Funnel: http://localhost:8000/stores/ST1008/funnel
+- Heatmap: http://localhost:8000/stores/ST1008/heatmap
 - Anomalies: http://localhost:8000/stores/ST1008/anomalies
-- Health:    http://localhost:8000/health
-- API Docs:  http://localhost:8000/docs
+- Health: http://localhost:8000/health
+- API Docs: http://localhost:8000/docs
 
 ---
 
@@ -80,6 +81,7 @@ CLIPS_DIR=/path/to/clips ./pipeline/run.sh
 ```
 
 The script:
+
 1. Runs `detect.py` on all 5 camera clips → writes `events/output.jsonl`
 2. Waits for the API to be ready
 3. Ingests POS transactions via `POST /pos/ingest`
@@ -126,8 +128,9 @@ curl -X POST http://localhost:8000/events/ingest \
 ```
 
 Response:
+
 ```json
-{"accepted": 142, "duplicates": 0, "rejected": 0, "errors": []}
+{ "accepted": 142, "duplicates": 0, "rejected": 0, "errors": [] }
 ```
 
 ### GET /stores/{store_id}/metrics
@@ -144,7 +147,7 @@ curl http://localhost:8000/stores/ST1008/metrics
   "conversion_rate": 0.391,
   "avg_dwell_ms": 45200,
   "zone_dwell": [
-    {"zone_id": "SKINCARE", "avg_dwell_ms": 62000, "visit_count": 14}
+    { "zone_id": "SKINCARE", "avg_dwell_ms": 62000, "visit_count": 14 }
   ],
   "current_queue_depth": 2,
   "abandonment_rate": 0.087,
@@ -157,10 +160,10 @@ curl http://localhost:8000/stores/ST1008/metrics
 ```json
 {
   "stages": [
-    {"stage": "Entry",         "count": 23, "drop_off_pct": 0.0},
-    {"stage": "Zone Visit",    "count": 19, "drop_off_pct": 17.4},
-    {"stage": "Billing Queue", "count": 10, "drop_off_pct": 47.4},
-    {"stage": "Purchase",      "count": 9,  "drop_off_pct": 10.0}
+    { "stage": "Entry", "count": 23, "drop_off_pct": 0.0 },
+    { "stage": "Zone Visit", "count": 19, "drop_off_pct": 17.4 },
+    { "stage": "Billing Queue", "count": 10, "drop_off_pct": 47.4 },
+    { "stage": "Purchase", "count": 9, "drop_off_pct": 10.0 }
   ]
 }
 ```
@@ -195,22 +198,22 @@ Coverage report is displayed automatically. Target: ≥70%.
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DB_PATH` | `store_intelligence.db` | SQLite file path |
-| `CLIPS_DIR` | `.` | Directory containing camera clips |
-| `API_URL` | `http://localhost:8000` | API base URL for run.sh |
-| `EVERY_N` | `2` | Frame skip ratio for detection |
+| Variable    | Default                 | Description                       |
+| ----------- | ----------------------- | --------------------------------- |
+| `DB_PATH`   | `store_intelligence.db` | SQLite file path                  |
+| `CLIPS_DIR` | `.`                     | Directory containing camera clips |
+| `API_URL`   | `http://localhost:8000` | API base URL for run.sh           |
+| `EVERY_N`   | `2`                     | Frame skip ratio for detection    |
 
 ---
 
 ## Production Migration Path
 
-| Scale | Storage | Change Required |
-|-------|---------|-----------------|
-| Current (1 store, batch) | SQLite | None |
-| 5–10 stores, near-real-time | PostgreSQL | Change `DATABASE_URL` in `database.py` |
-| 40 stores, live | PostgreSQL + Redis Streams | Add streaming consumer; Redis cache for metrics |
+| Scale                       | Storage                    | Change Required                                 |
+| --------------------------- | -------------------------- | ----------------------------------------------- |
+| Current (1 store, batch)    | SQLite                     | None                                            |
+| 5–10 stores, near-real-time | PostgreSQL                 | Change `DATABASE_URL` in `database.py`          |
+| 40 stores, live             | PostgreSQL + Redis Streams | Add streaming consumer; Redis cache for metrics |
 
 ---
 
