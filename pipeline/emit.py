@@ -180,12 +180,14 @@ class EventEmitter:
         self._classify_staff(total_clip_duration_ms)
         for vs in self._visitors.values():
             if vs.entered and not vs.exited:
-                # Still inside at clip end — emit a final EXIT
                 ts = self._ts(total_clip_duration_ms)
                 if vs.current_zone:
                     dwell = total_clip_duration_ms - vs.zone_entry_time_ms
                     self._emit(ZONE_EXIT, vs, ts, vs.current_zone, dwell)
-                self._emit(EXIT, vs, ts, None, 0)
+                # Only emit EXIT for entry cameras — floor/billing cameras
+                # do not track store entry/exit, they track zone presence.
+                if self.camera_role == "entry":
+                    self._emit(EXIT, vs, ts, None, 0)
 
     def get_events(self) -> list[dict]:
         return list(self._events)

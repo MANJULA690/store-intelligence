@@ -20,7 +20,7 @@ def _now_utc() -> str:
 def _pct_drop(current: int, previous: int) -> float:
     if previous == 0:
         return 0.0
-    return round((1 - current / previous) * 100, 1)
+    return max(0.0, round((1 - current / previous) * 100, 1))
 
 
 def get_funnel(store_id: str, db: Session) -> StoreFunnel:
@@ -45,19 +45,18 @@ def get_funnel(store_id: str, db: Session) -> StoreFunnel:
     n_entered = len(entered_visitors)
 
     # ── Stage 2: Visitors who visited at least one product zone ───────────────
-    visited_zone: set[str] = set(
-        row[0]
-        for row in db.execute(
-            select(distinct(EventRecord.visitor_id)).where(
-                EventRecord.store_id  == store_id,
-                EventRecord.event_type.in_(["ZONE_ENTER", "ZONE_DWELL", "ZONE_EXIT"]),
-                EventRecord.zone_id.notin_(["ENTRY_EXIT", "BILLING"]),
-                EventRecord.is_staff  == False,
-            )
-        ).fetchall()
-        if row[0] in entered_visitors
-    )
-    n_zone = len(visited_zone)
+    # Note: without cross-camera ReID, visitor_ids differ across cameras.
+    # We count zone visitors independently — not filtered by entered_visitors —
+    # since a visitor detected on a floor camera may have a different track_id
+    # than the same person on the entry camera.
+    n_zone = db.scalar(
+        select(func.count(distinct(EventRecord.visitor_id))).where(
+            EventRecord.store_id  == store_id,
+            EventRecord.event_type.in_(["ZONE_ENTER", "ZONE_DWELL", "ZONE_EXIT"]),
+            EventRecord.zone_id.notin_(["ENTRY_EXIT", "BILLING"]),
+            EventRecord.is_staff  == False,
+        )
+    ) or 0
 
     # ── Stage 3: Visitors who reached billing queue ───────────────────────────
     billing_visitors: set[str] = set(
