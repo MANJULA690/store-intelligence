@@ -46,12 +46,12 @@ The design goal is a single measurable outcome: **offline store conversion rate*
 
 The provided store layout XLSX was empty (no zone definitions). Rather than blocking on missing data, I defined a practical zone layout for a Purplle beauty retail store based on standard store layout conventions:
 
-| Camera | Role | Zones Covered |
-|--------|------|---------------|
-| CAM_1  | Entry/Exit threshold | ENTRY_EXIT |
-| CAM_2  | Main floor (left half) | SKINCARE, MAKEUP, HAIRCARE, FRAGRANCE |
-| CAM_3  | Billing counter | BILLING |
-| CAM_4  | Secondary entry | ENTRY_EXIT |
+| Camera | Role                    | Zones Covered                             |
+| ------ | ----------------------- | ----------------------------------------- |
+| CAM_1  | Entry/Exit threshold    | ENTRY_EXIT                                |
+| CAM_2  | Main floor (left half)  | SKINCARE, MAKEUP, HAIRCARE, FRAGRANCE     |
+| CAM_3  | Billing counter         | BILLING                                   |
+| CAM_4  | Secondary entry         | ENTRY_EXIT                                |
 | CAM_5  | Main floor (right half) | LIPCARE, NAILCARE, ACCESSORIES, FRAGRANCE |
 
 Zone assignment within each frame uses a simple quadrant model (cx, cy normalised to 0–1). This is a deliberate simplicity trade-off: a rule-based approach is more debuggable and explainable than a learned zone classifier in a 3-day window.
@@ -71,6 +71,8 @@ Staff are identified using a dwell ratio heuristic: any track active for more th
 ### Re-Entry Detection
 
 When a new ENTRY is detected on an entry camera, the emitter checks `_recent_exits` for any visitor_id that exited within the last 60 seconds. If found, a `REENTRY` event is emitted instead of a second `ENTRY`. This prevents re-entry inflation — a known problem with naive visit counting systems.
+
+**Note on REENTRY events in output.jsonl:** The provided clips are each approximately 2.5 minutes long. In this short window, no visitor who exited an entry camera re-appeared at the same entry camera within the 60-second re-entry window. As a result, zero REENTRY events are present in `events/output.jsonl`. The re-entry detection logic is fully implemented in `pipeline/emit.py` (`_recent_exits` dict, checked on every ENTRY event) and is covered by the test suite in `tests/test_pipeline.py`. A longer recording window (e.g. 20+ minutes as described in the problem spec) would produce observable re-entry events.
 
 ### POS Correlation
 
@@ -93,6 +95,7 @@ All metrics endpoints compute results directly from the database on each request
 ### Anomaly Detection
 
 Four anomaly types are detected:
+
 1. **BILLING_QUEUE_SPIKE** — triggered when `queue_depth ≥ 3` in recent events
 2. **DEAD_ZONE** — triggered when a zone has had no visits in 30 minutes
 3. **CONVERSION_DROP** — triggered when billing reach rate drops >30% below baseline
@@ -109,10 +112,21 @@ Each anomaly includes a `suggested_action` string — not just a flag. This was 
 ## AI-Assisted Decisions
 
 ### 1. Supervision library for ByteTrack integration
+
 I asked Claude to compare `supervision` vs. direct `bytetracker` package vs. `norfair` for multi-object tracking. The AI correctly identified that `supervision.ByteTrack` gives the best integration with ultralytics YOLO output format and requires no extra model downloads. I agreed with this recommendation and used it.
 
 ### 2. Staff detection heuristic
+
 I initially prompted an LLM to suggest a uniform-colour-based staff classifier using HSV thresholds. After evaluating this approach, I disagreed — it would be fragile across different lighting conditions and require per-store calibration. I overrode the suggestion and chose the dwell-ratio heuristic (>70% of clip duration), which is lighting-invariant and gives consistent results on the short clips provided.
 
 ### 3. Event schema `metadata` as a flat JSON string
+
 The AI suggested using a separate `event_metadata` table with foreign keys for structured metadata storage. I chose to store `metadata` as a JSON string in the events table instead. Reason: the metadata fields (`queue_depth`, `sku_zone`, `session_seq`) are read together with the event and never queried independently. A joined table would add query complexity with no query benefit at this scale. If a specific metadata field needed indexing (e.g., `queue_depth` for spike detection), a computed column could be added without a schema migration.
+
+### 4. Anomaly detection thresholds and the 5-minute POS correlation window
+
+I asked an LLM to suggest thresholds for the billing queue spike detector and the visitor-to-transaction correlation window. The AI proposed a queue depth threshold of 5 and a 10-minute POS correlation window, citing general retail benchmarks. I disagreed with both. For a small-format beauty store like Purplle (typically 2–3 billing staff, narrow counters), a queue depth of 5 would mean 5 people visibly waiting — a severe situation that would already be causing customer exits. I lowered the threshold to 3, which triggers an alert early enough for a manager to act. On the correlation window: a 10-minute window risks false positives (a visitor who browsed and left 8 minutes ago being credited with a conversion they didn't make). I chose 5 minutes, consistent with how Croma and similar Indian retail analytics systems define billing proximity. The AI's suggestions were a useful starting point, but the final values were derived from domain reasoning about the specific store format, not generic benchmarks.
+
+### 5. Conversion funnel stage definitions
+
+I asked an LLM to design the conversion funnel stages for a beauty retail store. The AI proposed a 6-stage funnel: Passerby → Entry → Zone Browse → Product Pickup → Billing Queue → Purchase — including a "passerby" stage derived from footfall outside the store entrance. I disagreed on two counts. First, the provided clips are entirely interior CCTV footage; there is no exterior camera to count passersby, so including that stage would either be empty or fabricated. Second, a 6-stage funnel with a "Product Pickup" stage requires product-level SKU detection (shelf interaction tracking), which is beyond the scope of person-tracking with YOLOv8 alone and would require a separate object detection model fine-tuned on Purplle's SKUs. I simplified to 4 stages — Entry → Zone Visit → Billing Queue → Purchase — which are all directly observable from the event stream without additional inference. Each stage maps to a concrete event type (`ENTRY`, `ZONE_ENTER`, `BILLING_QUEUE_JOIN`, POS transaction), making the funnel fully auditable. The AI's suggestion was more aspirational than the data could support; the final design reflects what is actually measurable with the available inputs.
